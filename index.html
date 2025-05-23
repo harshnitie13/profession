@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keyword Search with Dropdown</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .search-container {
+            position: relative; /* Needed for positioning the dropdown */
+            width: 100%;
+            max-width: 400px; /* Limit width for better appearance */
+        }
+
+        #keywordSearch {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box; /* Include padding in width */
+            outline: none; /* Remove default focus outline */
+            transition: border-color 0.2s ease;
+        }
+
+        #keywordSearch:focus {
+            border-color: #007bff; /* Highlight border on focus */
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+
+        .suggestions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #eee;
+            border-top: none;
+            max-height: 250px; /* Limit height and make it scrollable */
+            overflow-y: auto;
+            position: absolute; /* Position below the input */
+            width: 100%;
+            background-color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 1000; /* Ensure it appears above other content */
+            border-radius: 0 0 8px 8px; /* Rounded corners only at the bottom */
+            display: none; /* Hide by default */
+        }
+
+        .suggestions-list li {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 15px;
+        }
+
+        .suggestions-list li:last-child {
+            border-bottom: none;
+        }
+
+        .suggestions-list li:hover,
+        .suggestions-list li.selected { /* For keyboard navigation */
+            background-color: #e9ecef;
+            color: #333;
+        }
+
+        /* Optional: Highlight matching text */
+        .suggestions-list li span.highlight {
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="search-container">
+        <input type="text" id="keywordSearch" placeholder="Search keywords...">
+        <ul id="suggestions" class="suggestions-list"></ul>
+    </div>
+
+    <script>
+        const keywords = [
+            "Retail Banking Specialist", "Commercial Banking Officer", "FinTech Analyst", "Founder & CEO", "Startup Lead", "Venture Capitalist",
+            "Software Engineer", "Backend Developer", "Frontend Developer", "Full Stack Developer", "Mobile App Developer",
+            "DevOps Engineer", "Machine Learning Engineer", "AI Engineer", "Financial Analyst", "Investment Manager",
+            "Wealth Advisor", "Risk Management Specialist", "Compliance Officer (Finance)", "ESG Investing Analyst",
+            "Accountant", "Tax Consultant", "Auditor", "Administrative Assistant", "Executive Assistant", "Office Manager",
+            "Operations Coordinator", "School Teacher", "College Lecturer", "University Professor", "Online Educator",
+            "Instructional Designer", "Company Secretary", "Sales Executive", "Business Development Manager",
+            "Account Manager", "Software Architect", "Data Scientist", "UX/UI Designer", "Cybersecurity Analyst",
+            "Blockchain Developer", "Prompt Engineer", "Mechanical Engineer", "Production Engineer", "HR Generalist",
+            "Talent Acquisition Specialist", "Learning & Development Specialist", "Marketing Specialist", "Brand Manager",
+            "Digital Marketing Manager", "Performance Marketing Specialist", "Senior Manager", "Department Manager",
+            "Project Manager", "Farmer", "Agricultural Manager", "Investment Analyst", "Portfolio Manager",
+            "Management Consultant", "Agile Coach", "Team Lead", "Scrum Master", "Logistics Coordinator",
+            "Supply Chain Analyst", "Fleet Manager", "General Engineer", "Environmental Engineer", "Chemical Engineer",
+            "Civil Engineer", "Electronics Engineer", "Telecommunications Engineer", "Medical Professional", "Physician",
+            "Surgeon", "Dentist", "Nurse Practitioner", "Pharmacist", "Physiotherapist", "Occupational Therapist",
+            "Psychologist", "Counseling Psychologist", "Real Estate Agent", "Insurance Broker", "Commodity Trader",
+            "Independent Contractor", "Team Member", "Associate", "Chartered Accountant (CA)", "Customer Support Specialist",
+            "Client Success Manager", "KPO Professional", "Hotel Manager", "Hospitality Operations Lead", "IT Consultant",
+            "Solutions Architect", "Agricultural Scientist", "Agri-Tech Specialist", "Military Officer", "Military Personnel",
+            "Chef", "Sommelier", "Food Critic", "Event Manager", "Pharmacist", "Lawyer", "Legal Consultant", "Lecturer",
+            "Interior Designer", "Public Relations Specialist", "Fashion Designer", "Graphic Designer", "Product Designer",
+            "Hardware Engineer", "Network Engineer", "Cloud Administrator", "Business Owner / Entrepreneur",
+            "Corporate Trainer", "Curriculum Developer", "Actor", "Writer", "Content Writer", "Copywriter", "Professor",
+            "Architect", "Not Working", "Artist", "Digital Artist", "Social Worker", "NGO Professional", "Community Organizer",
+            "Beautician", "Hairstylist", "Fashion Designer", "Media Producer", "Broadcast Journalist", "Army Personnel",
+            "Advertising Specialist", "Airline Professional", "Ground Operations Specialist", "Government Employee",
+            "Public Administrator", "Police Officer", "Web Designer", "UX Designer", "UI Designer", "CxO (Chief Officer)",
+            "Chairman", "Board Director", "President", "Scientist", "Environmental Scientist", "Biotechnologist", "Physicist",
+            "Legal Counsel", "Legal Analyst", "Jewellery Designer", "Veterinary Doctor", "Sportsman", "Research Assistant",
+            "Research Scholar", "Entertainment Professional", "Catering Professional", "Pilot", "Co-Pilot",
+            "Legal Assistant", "Medical Transcriptionist", "Politician", "Merchant Naval Officer", "Mariner", "Animator",
+            "Navy Personnel", "IAS Officer", "IRS Officer", "IES Officer", "IFS Officer", "Student", "Flight Attendant",
+            "Air Hostess", "Horticulturist", "Airforce Personnel", "Landscape Architect", "Biologist", "Botanist",
+            "IPS Officer", "Commercial Artist", "Therapist (General)", "Physician Assistant", "VP / AVP / GM / DGM",
+            "Journalist", "Architect", "Hair Stylist", "Air Force Personnel", "CxO (Chief Officer)", "Vlogger",
+            "SEO Specialist", "Social Media Manager", "Data Analyst", "Generative AI Specialist", "AI Ethicist",
+            "Sustainability Consultant", "Renewable Energy Engineer", "Green Architect", "Podcaster", "YouTube Creator",
+            "DeFi Specialist", "Crypto Advisor", "Growth Marketing Lead", "People Operations Specialist",
+            "Telemedicine Coordinator", "Clinical Informaticist", "Health Coach", "EdTech Product Manager",
+            "E-Governance Specialist", "HVAC Technician", "Solar Panel Installer", "Pet Groomer", "Delivery Driver",
+            "Digital Nomad", "Freelance Professional", "Influencer", "Social Media Content Creator", "TikTok Creator",
+            "Podcast Host", "YouTube Influencer", "Data Engineer", "AI Trainer", "NLP Specialist",
+            "Computer Vision Specialist", "Blockchain Consultant", "Crypto Analyst", "Growth Hacker",
+            "Health Tech Specialist", "Wellness Influencer", "Online Course Creator", "Ride-share Driver",
+            "Food Delivery Rider", "Freelancer", "Remote Work Specialist", "New Profession/Keyword", "Gym Trainer",
+            "Investor", "Angel Investor", "Theater Artist", "Makeup Artist", "Drone Photographer",
+            "Mobile Game Developer", "Influencer", "YouTube Creator", "TikTok Content Creator", "AI Trainer",
+            "Data Engineer", "Cryptocurrency Trader", "Penetration Tester", "Cloud Security Specialist", "Startup Mentor",
+            "Digital Transformation Consultant", "Health Informatics Specialist", "Nutrition Coach", "Personal Stylist",
+            "Barber", "Electric Vehicle Technician", "Solar Technician", "Housekeeper", "E-learning Content Developer",
+            "MOOC Instructor", "UI/UX Researcher", "Brand Strategist", "Diversity & Inclusion Officer",
+            "Digital Sales Executive", "Customer Success Manager", "Podcast Host", "Video Content Producer",
+            "Deep Learning Researcher", "NLP Specialist", "Computer Vision Specialist", "Financial Planner",
+            "Robo-advisor Analyst", "Robotics Engineer", "Process Improvement Specialist", "Climate Analyst",
+            "Art Therapist", "Substance Abuse Counselor", "Chief Sustainability Officer", "Chief Diversity Officer",
+            "SEO Specialist", "SEM Specialist", "Content Marketing Manager", "Growth Hacker",
+            "Site Reliability Engineer (SRE)", "Cloud Solutions Architect", "Last Mile Delivery Manager", "ESG Analyst",
+            "Mindfulness Coach", "Voice Over Artist", "3D Animator", "UX Writer", "Augmented Reality Developer",
+            "Blockchain Architect", "Data Visualization Specialist", "AI Ethics Officer", "Nail Technician",
+            "Massage Therapist", "Business Intelligence Consultant", "Brand Storyteller", "Community Manager",
+            "Influencer Marketing Manager", "People Analytics Specialist", "Security Operations Center (SOC) Analyst",
+            "Quantitative Analyst", "Data Science Researcher", "Data Privacy Officer", "Genetic Counselor",
+            "Wedding Photographer", "Commercial Drone Operator", "Live Streamer", "API Developer",
+            "Software Tester / QA Engineer", "Automation Engineer", "Pest Control Technician",
+            "Change Management Consultant", "STEAM Educator", "Personal Trainer", "Private Equity Analyst",
+            "Online Coach (Fitness)", "Online Coach (Business)", "Online Coach (Life)", "E-sports Coach",
+            "FinTech Product Manager", "Stand-up Comedian", "Product Manager", "Reinforcement Learning Engineer",
+            "Accelerator Program Manager", "Influencer Marketing Specialist", "Crowdfunding Specialist",
+            "Mobile UX Designer", "Conversational AI Developer", "Account Executive", "Channel Partner Manager"
+        ];
+
+        const searchInput = document.getElementById('keywordSearch');
+        const suggestionsList = document.getElementById('suggestions');
+        let selectedSuggestionIndex = -1; // For keyboard navigation
+
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            suggestionsList.innerHTML = ''; // Clear previous suggestions
+            selectedSuggestionIndex = -1; // Reset selection
+
+            if (searchTerm.length === 0) {
+                suggestionsList.style.display = 'none';
+                return;
+            }
+
+            const matchingKeywords = keywords.filter(keyword =>
+                keyword.toLowerCase().includes(searchTerm)
+            );
+
+            if (matchingKeywords.length > 0) {
+                matchingKeywords.forEach((keyword, index) => {
+                    const listItem = document.createElement('li');
+
+                    // Highlight matching text
+                    const regex = new RegExp(`(${searchTerm})`, 'gi');
+                    listItem.innerHTML = keyword.replace(regex, '<span class="highlight">$1</span>');
+
+                    listItem.addEventListener('click', function() {
+                        searchInput.value = keyword; // Set input value to the full keyword
+                        suggestionsList.style.display = 'none';
+                        // Optional: Trigger a search or action based on the selected keyword
+                        console.log('Selected:', keyword);
+                    });
+                    suggestionsList.appendChild(listItem);
+                });
+                suggestionsList.style.display = 'block';
+            } else {
+                suggestionsList.style.display = 'none';
+            }
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            const items = suggestionsList.querySelectorAll('li');
+
+            if (items.length === 0) return; // No suggestions to navigate
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault(); // Prevent cursor movement in input
+                if (selectedSuggestionIndex < items.length - 1) {
+                    selectedSuggestionIndex++;
+                } else {
+                    selectedSuggestionIndex = 0; // Wrap around to the first item
+                }
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault(); // Prevent cursor movement in input
+                if (selectedSuggestionIndex > 0) {
+                    selectedSuggestionIndex--;
+                } else {
+                    selectedSuggestionIndex = items.length - 1; // Wrap around to the last item
+                }
+                updateSelection(items);
+            } else if (e.key === 'Enter') {
+                if (selectedSuggestionIndex > -1) {
+                    items[selectedSuggestionIndex].click(); // Simulate click on selected item
+                } else {
+                    // If no suggestion is selected, perform a general search with the current input value
+                    console.log('Performing general search for:', searchInput.value);
+                    suggestionsList.style.display = 'none';
+                }
+            } else if (e.key === 'Escape') {
+                suggestionsList.style.display = 'none';
+                selectedSuggestionIndex = -1; // Reset selection on escape
+            }
+        });
+
+        function updateSelection(items) {
+            items.forEach((item, index) => {
+                if (index === selectedSuggestionIndex) {
+                    item.classList.add('selected');
+                    // Scroll the selected item into view if it's not visible
+                    item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+            if (selectedSuggestionIndex > -1) {
+                // Optionally, update the input field with the selected suggestion for better feedback
+                // searchInput.value = items[selectedSuggestionIndex].textContent.replace(/<span class="highlight">|<\/span>/g, ''); // Remove highlight tags
+            }
+        }
+
+        // Hide suggestions when clicking outside the search container
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-container')) {
+                suggestionsList.style.display = 'none';
+                selectedSuggestionIndex = -1; // Reset selection
+            }
+        });
+
+        // Ensure suggestions are hidden when input loses focus (e.g., tabbing away)
+        searchInput.addEventListener('blur', function() {
+            // A small delay allows click event on suggestion to fire before blur hides it
+            setTimeout(() => {
+                if (!suggestionsList.contains(document.activeElement)) {
+                    suggestionsList.style.display = 'none';
+                    selectedSuggestionIndex = -1;
+                }
+            }, 100);
+        });
+
+        // Handle focus on suggestions list to prevent hiding
+        suggestionsList.addEventListener('mousedown', function(e) {
+            // Prevent input from losing focus immediately when clicking a suggestion
+            e.preventDefault();
+        });
+    </script>
+
+</body>
+</html>
