@@ -3,71 +3,68 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Profession Search with Fuzzy Predictive Dropdown</title>
+<title>Profession Search with Predictive Dropdown</title>
 <style>
   body {
     font-family: Arial, sans-serif;
-    padding: 40px;
     background: #f4f7f6;
+    margin: 0; padding: 20px;
     display: flex;
     justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
   }
   .search-container {
     position: relative;
     width: 100%;
-    max-width: 400px;
+    max-width: 450px;
   }
-  label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-  }
-  input[type="text"] {
+  #keywordSearch {
     width: 100%;
     padding: 12px 15px;
     font-size: 16px;
-    border: 1px solid #ccc;
     border-radius: 8px;
-    outline: none;
+    border: 1px solid #ccc;
     box-sizing: border-box;
+    outline: none;
     transition: border-color 0.2s ease;
   }
-  input[type="text"]:focus {
+  #keywordSearch:focus {
     border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
   }
-  ul.suggestions-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
     border: 1px solid #eee;
     border-top: none;
     max-height: 250px;
     overflow-y: auto;
-    position: absolute;
-    width: 100%;
-    background: white;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     border-radius: 0 0 8px 8px;
-    z-index: 1000;
+    list-style: none;
+    margin: 0; padding: 0;
     display: none;
+    z-index: 1000;
   }
-  ul.suggestions-list li {
-    padding: 12px 15px;
+  .suggestions-list li {
+    padding: 10px 15px;
     cursor: pointer;
-    border-bottom: 1px solid #f0f0f0;
     font-size: 15px;
+    border-bottom: 1px solid #f0f0f0;
   }
-  ul.suggestions-list li:last-child {
+  .suggestions-list li:last-child {
     border-bottom: none;
   }
-  ul.suggestions-list li:hover,
-  ul.suggestions-list li.selected {
+  .suggestions-list li:hover,
+  .suggestions-list li.selected {
     background-color: #e9ecef;
     color: #333;
   }
-  /* Highlight matched text */
-  span.highlight {
+  .suggestions-list li span.highlight {
     font-weight: bold;
     color: #007bff;
   }
@@ -75,166 +72,202 @@
 </head>
 <body>
   <div class="search-container">
-    <label for="keywordSearch">Enter your profession</label>
-    <input type="text" id="keywordSearch" autocomplete="off" placeholder="Start typing profession..." />
+    <input type="text" id="keywordSearch" placeholder="Enter your profession ..." autocomplete="off" />
     <ul id="suggestions" class="suggestions-list"></ul>
   </div>
 
-  <!-- Include Fuse.js from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
-  <script>
-    // Profession list (can be trimmed or extended)
-    const keywords = [
-      "Retail Banking Specialist", "Commercial Banking Officer", "FinTech Analyst", "Founder & CEO",
-      "Startup Lead", "Venture Capitalist", "Software Engineer", "Backend Developer",
-      "Frontend Developer", "Full Stack Developer", "Mobile App Developer", "DevOps Engineer",
-      "Machine Learning Engineer", "AI Engineer", "Financial Analyst", "Investment Manager",
-      "Wealth Advisor", "Risk Management Specialist", "Compliance Officer (Finance)",
-      "ESG Investing Analyst", "Accountant", "Tax Consultant", "Auditor", "Administrative Assistant",
-      "Executive Assistant", "Office Manager", "Operations Coordinator", "School Teacher",
-      "College Lecturer", "University Professor", "Online Educator", "Instructional Designer",
-      "Company Secretary", "Sales Executive", "Business Development Manager", "Account Manager",
-      "Software Architect", "Data Scientist", "UX/UI Designer", "Cybersecurity Analyst",
-      "Blockchain Developer", "Prompt Engineer", "Mechanical Engineer", "Production Engineer",
-      "HR Generalist", "Talent Acquisition Specialist", "Learning & Development Specialist",
-      "Marketing Specialist", "Brand Manager", "Digital Marketing Manager", "Performance Marketing Specialist",
-      "Senior Manager", "Department Manager", "Project Manager", "Farmer", "Agricultural Manager",
-      "Investment Analyst", "Portfolio Manager", "Management Consultant", "Agile Coach", "Team Lead",
-      "Scrum Master", "Logistics Coordinator", "Supply Chain Analyst", "Fleet Manager", "General Engineer",
-      "Environmental Engineer", "Chemical Engineer", "Civil Engineer", "Electronics Engineer",
-      "Telecommunications Engineer", "Medical Professional", "Physician", "Surgeon", "Dentist",
-      "Nurse Practitioner", "Pharmacist", "Physiotherapist", "Occupational Therapist",
-      "Psychologist", "Counseling Psychologist", "Real Estate Agent", "Insurance Broker",
-      "Commodity Trader", "Independent Contractor", "Team Member", "Associate", "Chartered Accountant (CA)",
-      "Customer Support Specialist", "Client Success Manager", "KPO Professional", "Hotel Manager",
-      "Hospitality Operations Lead", "IT Consultant", "Solutions Architect", "Agricultural Scientist",
-      "Agri-Tech Specialist", "Military Officer", "Military Personnel", "Chef", "Sommelier",
-      "Food Critic", "Event Manager", "Lawyer", "Legal Consultant", "Interior Designer",
-      "Public Relations Specialist", "Fashion Designer", "Graphic Designer", "Product Designer",
-      "Hardware Engineer", "Network Engineer", "Cloud Administrator", "Business Owner / Entrepreneur",
-      "Corporate Trainer", "Curriculum Developer", "Actor", "Writer", "Content Writer", "Copywriter",
-      "Professor", "Architect", "Not Working", "Artist", "Digital Artist", "Social Worker",
-      "NGO Professional", "Community Organizer", "Beautician", "Hairstylist", "Media Producer",
-      "Broadcast Journalist", "Army Personnel", "Advertising Specialist", "Airline Professional",
-      "Ground Operations Specialist", "Government Employee", "Public Administrator", "Police Officer",
-      "Web Designer", "UX Designer", "UI Designer", "CxO (Chief Officer)", "Chairman", "Board Director",
-      "President", "Scientist", "Environmental Scientist", "Biotechnologist", "Physicist",
-      "Legal Counsel", "Legal Analyst", "Jewellery Designer", "Veterinary Doctor", "Sportsman",
-      "Research Assistant", "Research Scholar", "Entertainment Professional", "Catering Professional",
-      "Pilot", "Co-Pilot", "Legal Assistant", "Medical Transcriptionist", "Politician",
-      "Merchant Naval Officer", "Mariner", "Animator", "Navy Personnel", "IAS Officer",
-      "IRS Officer", "IES Officer", "IFS Officer", "Student", "Flight Attendant", "Air Hostess",
-      "Horticulturist", "Airforce Personnel", "Landscape Architect", "Biologist", "Botanist",
-      "IPS Officer", "Commercial Artist", "Therapist (General)", "Physician Assistant",
-      "VP / AVP / GM / DGM", "Journalist", "Hair Stylist", "Vlogger", "SEO Specialist",
-      "Social Media Manager", "Data Analyst", "Generative AI Specialist", "AI Ethicist",
-      "Sustainability Consultant", "Renewable Energy Engineer", "Green Architect", "Podcaster",
-      "YouTube Creator", "DeFi Specialist", "Crypto Advisor", "Growth Marketing Lead",
-      "People Operations Specialist", "Telemedicine Coordinator", "Clinical Informaticist",
-      "Health Coach", "EdTech Product Manager", "E-Governance Specialist", "HVAC Technician",
-      "Solar Panel Installer", "Pet Groomer", "Delivery Driver", "Digital Nomad",
-      "Freelance Professional", "Influencer", "Social Media Content Creator", "TikTok Creator",
-      "Podcast Host", "YouTube Influencer", "Data Engineer", "AI Trainer", "NLP Specialist",
-      "Computer Vision Specialist", "Blockchain Consultant", "Crypto Analyst", "Growth Hacker",
-      "Health Tech Specialist", "Wellness Influencer", "Online Course Creator", "Ride-share Driver",
-      "Food Delivery Rider", "Freelancer", "Remote Work Specialist", "Gym Trainer", "Investor",
-      "Angel Investor", "Theater Artist", "Makeup Artist", "Drone Photographer", "Mobile Game Developer"
-      // Add more if needed
-    ];
+<script>
+  const keywords = [
+    "Retail Banking Specialist","Commercial Banking Officer","FinTech Analyst","Founder & CEO","Startup Lead","Venture Capitalist",
+    "Software Engineer","Backend Developer","Frontend Developer","Full Stack Developer","Mobile App Developer","DevOps Engineer",
+    "Machine Learning Engineer","AI Engineer","Financial Analyst","Investment Manager","Wealth Advisor","Risk Management Specialist",
+    "Compliance Officer (Finance)","ESG Investing Analyst","Accountant","Tax Consultant","Auditor","Administrative Assistant",
+    "Executive Assistant","Office Manager","Operations Coordinator","School Teacher","College Lecturer","University Professor",
+    "Online Educator","Instructional Designer","Company Secretary","Sales Executive","Business Development Manager","Account Manager",
+    "Software Architect","Data Scientist","UX/UI Designer","Cybersecurity Analyst","Blockchain Developer","Prompt Engineer",
+    "Mechanical Engineer","Production Engineer","HR Generalist","Talent Acquisition Specialist","Learning & Development Specialist",
+    "Marketing Specialist","Brand Manager","Digital Marketing Manager","Performance Marketing Specialist","Senior Manager",
+    "Department Manager","Project Manager","Farmer","Agricultural Manager","Investment Analyst","Portfolio Manager","Management Consultant",
+    "Agile Coach","Team Lead","Scrum Master","Logistics Coordinator","Supply Chain Analyst","Fleet Manager","General Engineer",
+    "Environmental Engineer","Chemical Engineer","Civil Engineer","Electronics Engineer","Telecommunications Engineer",
+    "Medical Professional","Physician","Surgeon","Dentist","Nurse Practitioner","Pharmacist","Physiotherapist","Occupational Therapist",
+    "Psychologist","Counseling Psychologist","Real Estate Agent","Insurance Broker","Commodity Trader","Independent Contractor",
+    "Team Member","Associate","Chartered Accountant (CA)","Customer Support Specialist","Client Success Manager","KPO Professional",
+    "Hotel Manager","Hospitality Operations Lead","IT Consultant","Solutions Architect","Agricultural Scientist","Agri-Tech Specialist",
+    "Military Officer","Military Personnel","Chef","Sommelier","Food Critic","Event Manager","Lawyer","Legal Consultant",
+    "Interior Designer","Public Relations Specialist","Fashion Designer","Graphic Designer","Product Designer","Hardware Engineer",
+    "Network Engineer","Cloud Administrator","Business Owner / Entrepreneur","Corporate Trainer","Curriculum Developer","Actor",
+    "Writer","Content Writer","Copywriter","Professor","Architect","Not Working","Artist","Digital Artist","Social Worker",
+    "NGO Professional","Community Organizer","Beautician","Hairstylist","Media Producer","Broadcast Journalist","Army Personnel",
+    "Advertising Specialist","Airline Professional","Ground Operations Specialist","Government Employee","Public Administrator",
+    "Police Officer","Web Designer","UX Designer","UI Designer","CxO (Chief Officer)","Chairman","Board Director","President",
+    "Scientist","Environmental Scientist","Biotechnologist","Physicist","Legal Counsel","Legal Analyst","Jewellery Designer",
+    "Veterinary Doctor","Sportsman","Research Assistant","Research Scholar","Entertainment Professional","Catering Professional",
+    "Pilot","Co-Pilot","Legal Assistant","Medical Transcriptionist","Politician","Merchant Naval Officer","Mariner","Animator",
+    "Navy Personnel","IAS Officer","IRS Officer","IES Officer","IFS Officer","Student","Flight Attendant","Air Hostess",
+    "Horticulturist","Airforce Personnel","Landscape Architect","Biologist","Botanist","IPS Officer","Commercial Artist",
+    "Therapist (General)","Physician Assistant","VP / AVP / GM / DGM","Journalist","Hair Stylist","Vlogger","SEO Specialist",
+    "Social Media Manager","Data Analyst","Generative AI Specialist","AI Ethicist","Sustainability Consultant",
+    "Renewable Energy Engineer","Green Architect","Podcaster","YouTube Creator","DeFi Specialist","Crypto Advisor",
+    "Growth Marketing Lead","People Operations Specialist","Telemedicine Coordinator","Clinical Informaticist","Health Coach",
+    "EdTech Product Manager","E-Governance Specialist","HVAC Technician","Solar Panel Installer","Pet Groomer","Delivery Driver",
+    "Digital Nomad","Freelance Professional","Influencer","Social Media Content Creator","TikTok Creator","Podcast Host",
+    "YouTube Influencer","Data Engineer","AI Trainer","NLP Specialist","Computer Vision Specialist","Blockchain Consultant",
+    "Crypto Analyst","Growth Hacker","Health Tech Specialist","Wellness Influencer","Online Course Creator","Ride-share Driver",
+    "Food Delivery Rider","Freelancer","Remote Work Specialist","New Profession/Keyword","Gym Trainer","Investor","Angel Investor",
+    "Theater Artist","Makeup Artist","Drone Photographer","Mobile Game Developer","Cryptocurrency Trader","Penetration Tester",
+    "Cloud Security Specialist","Startup Mentor","Digital Transformation Consultant","Health Informatics Specialist",
+    "Nutrition Coach","Personal Stylist","Barber","Electric Vehicle Technician","Solar Technician","Housekeeper",
+    "E-learning Content Developer","MOOC Instructor","UI/UX Researcher","Brand Strategist","Diversity & Inclusion Officer",
+    "Digital Sales Executive","Video Content Producer","Deep Learning Researcher","Financial Planner","Robo-advisor Analyst",
+    "Robotics Engineer","Process Improvement Specialist","Climate Analyst","Art Therapist","Substance Abuse Counselor",
+    "Chief Sustainability Officer","Chief Diversity Officer","SEM Specialist","Content Marketing Manager",
+    "Site Reliability Engineer (SRE)","Cloud Solutions Architect","Last Mile Delivery Manager","ESG Analyst",
+    "Mindfulness Coach","Voice Over Artist","3D Animator","UX Writer","Augmented Reality Developer","Blockchain Architect",
+    "Data Visualization Specialist","AI Ethics Officer","Nail Technician","Massage Therapist","Business Intelligence Consultant",
+    "Brand Storyteller","Community Manager","Influencer Marketing Manager","People Analytics Specialist",
+    "Security Operations Center (SOC) Analyst","Quantitative Analyst","Data Science Researcher","Data Privacy Officer",
+    "Genetic Counselor","Wedding Photographer","Commercial Drone Operator","Live Streamer","API Developer",
+    "Software Tester / QA Engineer","Automation Engineer","Pest Control Technician","Change Management Consultant",
+    "STEAM Educator","Personal Trainer","Private Equity Analyst","Online Coach (Fitness)","Online Coach (Business)",
+    "Online Coach (Life)","E-sports Coach","FinTech Product Manager","Stand-up Comedian","Product Manager",
+    "Reinforcement Learning Engineer","Accelerator Program Manager","Influencer Marketing Specialist",
+    "Crowdfunding Specialist","Mobile UX Designer","Conversational AI Developer","Account Executive",
+    "Channel Partner Manager","Banker","Investment Banker","Yoga Teacher","Sports Coach","Professional Athlete",
+    "Fitness Trainer","Co-founder","Chief Executive Officer (CEO)","CEO","Chief Marketing Officer (CMO)","CMO",
+    "Chief Financial Officer (CFO)","CFO","Chief Technology Officer (CTO)","CTO","Chief Operating Officer (COO)","COO",
+    "Chief Human Resources Officer (CHRO)","CHRO","Chief Product Officer (CPO)","CPO","Chief Data Officer (CDO)","CDO",
+    "Chief Information Officer (CIO)","CIO","Chief Sales Officer (CSO)","CSO","Chief Legal Officer (CLO)","CLO",
+    "Chief Revenue Officer (CRO)","CRO","Chief Medical Officer (CMO)","Chief Strategy Officer (CSO)",
+    "Chief Commercial Officer (CCO)","Chief Communications Officer (CCO)","Chief Compliance Officer (CCO)",
+    "Chief Risk Officer (CRO)","Chief Growth Officer (CGO)","Chief Experience Officer (CXO)","Chief People Officer (CPO)",
+    "Chief Digital Officer (CDO)","Founder","Entrepreneur","Solopreneur","Freelance Writer","Editorial Assistant","Editor",
+    "Journal Editor","Research Scientist","Postdoctoral Researcher","Laboratory Technician","Clinical Research Coordinator",
+    "Biostatistician","Epidemiologist","Public Health Specialist","Veterinary Technician","Animal Trainer","Zookeeper",
+    "Archivist","Librarian","Museum Curator","Exhibit Designer","Art Restorer","Forensic Scientist","Criminologist",
+    "Paralegal","Court Reporter","Mediator","Arbitrator","Policy Analyst","Urban Planner","Cartographer","Geologist",
+    "Meteorologist","Oceanographer","Astronomer","Cosmologist","Mathematician","Statistician","Cryptographer","Ethical Hacker",
+    "Security Architect","Incident Response Specialist","Forensic Investigator (Digital)","Technical Writer","Solutions Engineer",
+    "Customer Success Engineer","Sales Engineer","Field Service Engineer","Robotics Technician","Automation Technician",
+    "Mechatronics Engineer","Aeronautical Engineer","Naval Architect","Geotechnical Engineer","Structural Engineer",
+    "Transportation Engineer","Water Resources Engineer","Environmental Consultant","Sustainability Analyst",
+    "Renewable Energy Consultant","Energy Auditor","Food Scientist","Nutritionist","Dietitian","Occupational Health and Safety (OHS) Specialist",
+    "Ergonomist","Industrial Designer","Product Manager (Technical)","Product Marketing Manager","Go-to-Market (GTM) Specialist",
+    "Growth Marketer","Affiliate Marketing Manager","Partnership Manager","Channel Sales Manager","Vendor Manager",
+    "Procurement Specialist","Customs Broker","Freight Forwarder","Supply Chain Manager","Logistics Manager","Inventory Manager",
+    "Quality Assurance (QA) Manager","Regulatory Affairs Specialist","Clinical Trials Manager","Medical Writer","Health Policy Analyst",
+    "Care Coordinator","Public Relations Manager","Corporate Communications Manager","Event Coordinator","Catering Manager",
+    "Concierge","Tour Guide","Travel Agent","Cruise Director","Aircraft Mechanic","Ground Staff (Airline)","Railway Engineer",
+    "Train Conductor","Bus Driver","Truck Driver","Heavy Equipment Operator","Electrician","Plumber","Carpenter","Welder",
+    "Machinist","Mason","Roofer","Glazier","Painter","Landscaper","Gardener","Forest Ranger","Wildlife Biologist","Conservationist",
+    "Park Ranger","Firefighter","Emergency Medical Technician (EMT)","Paramedic","Crisis Counselor","Child Life Specialist",
+    "School Counselor","Vocational Counselor","Educational Psychologist","Special Education Teacher","Tutor","Admissions Counselor",
+    "Registrar","Student Affairs Professional","Alumni Relations Manager","Fundraiser","Grant Writer","Non-profit Director",
+    "Community Development Manager","Program Manager (Non-profit)","Case Worker","Youth Worker","Recreational Therapist",
+    "Art Director","Film Director","Film Producer","Video Editor","Sound Engineer","Lighting Designer","Costume Designer",
+    "Set Designer","Choreographer","Musician","Composer","Music Producer","Singer","Dancer","Performer","Stunt Performer",
+    "Voice Actor","Casting Director","Talent Agent","Publicist","Journalist (Broadcast)","Photojournalist","Sports Journalist",
+    "Food Journalist","Travel Journalist","Investigative Journalist","Copy Editor","Proofreader","Indexer","Literary Agent",
+    "Book Editor","Publisher","Illustrator","Concept Artist","Animator (2D/3D)","Game Designer","Game Developer","Esports Player",
+    "Esports Commentator","Streamer","Venture Partner","Private Equity Associate","Hedge Fund Analyst","Quantitative Researcher",
+    "Trader (Specific types like Equity Trader","Commodity Broker","Derivatives Trader","Wealth Manager","Fiduciary Advisor",
+    "Estate Planner","Retirement Planning Specialist","Mortgage Advisor","Loan Officer","Credit Analyst","Collections Specialist",
+    "Treasury Analyst","Payments Specialist","Fraud Analyst","Anti-Money Laundering (AML) Specialist","Know Your Customer (KYC) Officer",
+    "Forensic Accountant","Internal Auditor","External Auditor","Tax Preparer","Financial Advisor (Independent)","Business Analyst (IT focus)",
+    "Process Analyst","Change Manager","Corporate Trainer (Specific e.g.","Curriculum Developer (Corporate/L&D)","Head of People / People Operations",
+    "HR Business Partner (HRBP)","Compensation & Benefits Specialist","HRIS Analyst","Employee Relations Specialist","Recruitment Coordinator",
+    "Sourcing Specialist","Onboarding Specialist","Payroll Specialist","Health & Safety Manager","Diversity","Organizational Development (OD) Consultant",
+    "Learning Technologies Specialist"
+  ];
 
-    // Fuse.js options for fuzzy search
-    const fuseOptions = {
-      includeScore: true,
-      threshold: 0.4,
-      keys: []
-    };
+  const searchInput = document.getElementById('keywordSearch');
+  const suggestionsList = document.getElementById('suggestions');
+  let selectedSuggestionIndex = -1;
 
-    const fuse = new Fuse(keywords, fuseOptions);
+  searchInput.addEventListener('input', () => {
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    suggestionsList.innerHTML = '';
+    selectedSuggestionIndex = -1;
 
-    const input = document.getElementById('keywordSearch');
-    const suggestions = document.getElementById('suggestions');
-    let selectedIndex = -1;
-
-    function highlightMatch(text, pattern) {
-      const regex = new RegExp(pattern.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('.*?'), 'i');
-      const match = text.match(regex);
-      if (!match) return text;
-      return text.replace(regex, (matched) => `<span class="highlight">${matched}</span>`);
+    if (searchTerm.length === 0) {
+      suggestionsList.style.display = 'none';
+      return;
     }
 
-    input.addEventListener('input', () => {
-      const query = input.value.trim();
-      suggestions.innerHTML = '';
-      selectedIndex = -1;
+    // Filter keywords with case-insensitive substring match
+    const matches = keywords.filter(kw => kw.toLowerCase().includes(searchTerm));
 
-      if (query.length === 0) {
-        suggestions.style.display = 'none';
-        return;
-      }
-
-      // Fuse search for fuzzy matching
-      const results = fuse.search(query);
-
-      if (results.length === 0) {
-        suggestions.style.display = 'none';
-        return;
-      }
-
-      // Show top 10 results
-      results.slice(0, 10).forEach(({item}) => {
-        const li = document.createElement('li');
-        // Highlight by splitting on the query characters (fuzzy style)
-        li.innerHTML = highlightMatch(item, query);
-        li.addEventListener('click', () => {
-          input.value = item;
-          suggestions.style.display = 'none';
-          console.log('Selected:', item);
-        });
-        suggestions.appendChild(li);
-      });
-
-      suggestions.style.display = 'block';
-    });
-
-    input.addEventListener('keydown', (e) => {
-      const items = suggestions.querySelectorAll('li');
-      if (items.length === 0) return;
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedIndex = (selectedIndex + 1) % items.length;
-        updateSelection(items);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
-        updateSelection(items);
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (selectedIndex > -1) {
-          items[selectedIndex].click();
-        }
-      } else if (e.key === 'Escape') {
-        suggestions.style.display = 'none';
-        selectedIndex = -1;
-      }
-    });
-
-    function updateSelection(items) {
-      items.forEach((item, idx) => {
-        item.classList.toggle('selected', idx === selectedIndex);
-        if (idx === selectedIndex) {
-          item.scrollIntoView({block: 'nearest'});
-        }
-      });
+    if (matches.length === 0) {
+      suggestionsList.style.display = 'none';
+      return;
     }
 
-    // Hide suggestions when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.search-container')) {
-        suggestions.style.display = 'none';
-        selectedIndex = -1;
+    matches.forEach((match, idx) => {
+      const listItem = document.createElement('li');
+
+      // Highlight matching text (all occurrences)
+      const regex = new RegExp(`(${searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+      listItem.innerHTML = match.replace(regex, '<span class="highlight">$1</span>');
+
+      listItem.addEventListener('click', () => {
+        searchInput.value = match;
+        suggestionsList.style.display = 'none';
+        console.log('Selected:', match);
+      });
+
+      suggestionsList.appendChild(listItem);
+    });
+
+    suggestionsList.style.display = 'block';
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    const items = suggestionsList.querySelectorAll('li');
+    if (!items.length) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
+      updateSelection(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length;
+      updateSelection(items);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedSuggestionIndex > -1) {
+        items[selectedSuggestionIndex].click();
+      } else {
+        suggestionsList.style.display = 'none';
+        console.log('Performing search for:', searchInput.value);
+      }
+    } else if (e.key === 'Escape') {
+      suggestionsList.style.display = 'none';
+      selectedSuggestionIndex = -1;
+    }
+  });
+
+  function updateSelection(items) {
+    items.forEach((item, idx) => {
+      item.classList.toggle('selected', idx === selectedSuggestionIndex);
+      if (idx === selectedSuggestionIndex) {
+        item.scrollIntoView({ block: 'nearest' });
       }
     });
-  </script>
+  }
+
+  // Hide suggestions when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-container')) {
+      suggestionsList.style.display = 'none';
+      selectedSuggestionIndex = -1;
+    }
+  });
+
+  // Prevent suggestions from hiding on mouse down on suggestion
+  suggestionsList.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+  });
+</script>
 </body>
 </html>
